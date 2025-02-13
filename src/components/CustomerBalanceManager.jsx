@@ -17,17 +17,6 @@ const CustomerBalanceManager = () => {
     return today.toISOString().split('T')[0];
   });
 
-  const formatPhoneNumber = (phone) => {
-    let cleaned = phone?.replace(/\D/g, '');
-    if (cleaned?.startsWith('0')) {
-      cleaned = '972' + cleaned.substring(1);
-    }
-    if (!cleaned?.startsWith('972')) {
-      cleaned = '972' + cleaned;
-    }
-    return cleaned;
-  };
-
   const toggleCustomerDetails = async (customerId) => {
     console.log('Toggling details for customer:', customerId);
     if (expandedCustomer === customerId) {
@@ -36,6 +25,9 @@ const CustomerBalanceManager = () => {
       setExpandedCustomer(customerId);
       if (!customerInvoices[customerId]) {
         try {
+          const startDate = new Date();
+          startDate.setFullYear(startDate.getFullYear() - 1); // שנה אחורה
+
           const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getOpenInvoices', {
             method: 'POST',
             headers: {
@@ -46,21 +38,28 @@ const CustomerBalanceManager = () => {
               })
             },
             body: JSON.stringify({
-              CustomerID: customerId,
+              CustomerID: Number(customerId), // המרה למספר
               PageSize: 1000,
               PageNumber: 1,
               docTypeID: 0,
-              from: dateFilter,
-              to: new Date().toISOString().split('T')[0]
+              from: startDate.toISOString().split('T')[0] + ' 00:00',
+              to: new Date().toISOString().split('T')[0] + ' 23:59'
             })
           });
 
           const data = await response.json();
+          console.log('API Response:', data);
+          
           if (data.Success) {
-            console.log('Received invoices:', data.ReturnValue);
             setCustomerInvoices(prev => ({
               ...prev,
-              [customerId]: data.ReturnValue
+              [customerId]: data.ReturnValue || []
+            }));
+          } else {
+            console.error('API Error:', data.ErrorMessage);
+            setCustomerInvoices(prev => ({
+              ...prev,
+              [customerId]: []
             }));
           }
         } catch (err) {
@@ -150,6 +149,17 @@ const CustomerBalanceManager = () => {
     return customers.reduce((sum, customer) => sum + Math.abs(customer.balance), 0);
   };
 
+  const formatPhoneNumber = (phone) => {
+    let cleaned = phone?.replace(/\D/g, '');
+    if (cleaned?.startsWith('0')) {
+      cleaned = '972' + cleaned.substring(1);
+    }
+    if (!cleaned?.startsWith('972')) {
+      cleaned = '972' + cleaned;
+    }
+    return cleaned;
+  };
+
   const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
     const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
     setSendingMessages(true);
@@ -183,6 +193,7 @@ ${window.location.hostname}`;
 
     setSendingMessages(false);
   };
+
 return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       {/* Header */}
