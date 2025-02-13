@@ -151,8 +151,8 @@ const CustomerBalanceManager = () => {
     return customers.reduce((sum, customer) => sum + Math.abs(customer.balance), 0);
   };
 
-  const sendWhatsAppReminders = async () => {
-    const selectedCustomersData = customers.filter(customer => selectedCustomers.includes(customer.id));
+  const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
+    const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
     setSendingMessages(true);
     setCurrentCustomerIndex(0);
 
@@ -216,10 +216,10 @@ ${window.location.hostname}`;
       ) : (
         <>
           <div className="overflow-x-auto mb-4">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="p-2 border text-right">
+                  <th className="p-2 border text-right w-12">
                     <label className="flex items-center justify-center">
                       <input
                         type="checkbox"
@@ -227,12 +227,12 @@ ${window.location.hostname}`;
                         onChange={(e) => handleSelectAll(e.target.checked)}
                         className="h-4 w-4"
                       />
-                      <span className="mr-2">בחירה</span>
                     </label>
                   </th>
-                  <th className="p-2 border text-right">שם הלקוח</th>
-                  <th className="p-2 border text-right">טלפון</th>
-                  <th className="p-2 border text-right">יתרת חוב</th>
+                  <th className="p-2 border text-right w-1/3">שם הלקוח</th>
+                  <th className="p-2 border text-right w-1/4">טלפון</th>
+                  <th className="p-2 border text-right w-1/6">יתרת חוב</th>
+                  <th className="p-2 border text-right w-1/6">פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,16 +246,26 @@ ${window.location.hostname}`;
                         className="h-4 w-4"
                       />
                     </td>
-                    <td className="p-2 border">{customer.name}</td>
+                    <td className="p-2 border truncate" title={customer.name}>{customer.name}</td>
                     <td className="p-2 border" dir="ltr">{customer.phone2 || customer.phone}</td>
                     <td className="p-2 border text-red-500 text-right">
                       {formatCurrency(customer.balance)}
+                    </td>
+                    <td className="p-2 border text-center">
+                      <button
+                        onClick={() => sendWhatsAppReminders([customer.id])}
+                        disabled={sendingMessages}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 mx-auto"
+                      >
+                        <Send className="h-3 w-3" />
+                        שלח
+                      </button>
                     </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan="3" className="p-2 border text-right">סה"כ חובות פתוחים:</td>
-                  <td className="p-2 border text-red-500 text-right">{formatCurrency(getTotalDebt())}</td>
+                  <td colSpan="2" className="p-2 border text-red-500 text-right">{formatCurrency(getTotalDebt())}</td>
                 </tr>
               </tbody>
             </table>
