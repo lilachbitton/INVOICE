@@ -219,10 +219,10 @@ return (
         <>
           {/* Desktop View */}
           <div className="hidden md:block overflow-x-auto mb-4">
-            <table className="w-full border-collapse table-fixed">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="p-2 border text-right w-12">
+                  <th className="p-3 border text-right w-12">
                     <input
                       type="checkbox"
                       checked={selectedCustomers.length === customers.length}
@@ -230,17 +230,17 @@ return (
                       className="h-4 w-4"
                     />
                   </th>
-                  <th className="p-2 border text-right w-1/3">שם הלקוח</th>
-                  <th className="p-2 border text-right w-1/4">טלפון</th>
-                  <th className="p-2 border text-right w-1/6">יתרת חוב</th>
-                  <th className="p-2 border text-right w-1/6">פעולות</th>
+                  <th className="p-3 border text-right">שם הלקוח</th>
+                  <th className="p-3 border text-right w-48">טלפון</th>
+                  <th className="p-3 border text-right w-36">יתרת חוב</th>
+                  <th className="p-3 border text-right w-36">פעולות</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.map((customer) => (
                   <React.Fragment key={customer.id}>
                     <tr className="hover:bg-gray-50">
-                      <td className="p-2 border text-center">
+                      <td className="p-3 border text-center align-top">
                         <input
                           type="checkbox"
                           checked={selectedCustomers.includes(customer.id)}
@@ -248,38 +248,34 @@ return (
                           className="h-4 w-4"
                         />
                       </td>
-                      <td className="p-2 border">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate">{customer.name}</span>
-                            {customerInvoices[customer.id]?.length > 0 && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                {customerInvoices[customer.id].length} חשבוניות
-                              </span>
-                            )}
-                          </div>
+                      <td className="p-3 border">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{customer.name}</span>
                           {customerInvoices[customer.id]?.length > 0 && (
-                            <button
-                              onClick={() => toggleCustomerDetails(customer.id)}
-                              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 px-2 py-1 rounded transition-colors"
-                            >
-                              <FileText className="h-4 w-4" />
-                              {expandedCustomer === customer.id ? 'סגור' : 'פתח'}
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleCustomerDetails(customer.id)}
+                                className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full text-sm transition-colors"
+                              >
+                                <FileText className="h-4 w-4" />
+                                <span>{customerInvoices[customer.id].length} חשבוניות</span>
+                                <span className="text-blue-400">{expandedCustomer === customer.id ? '▼' : '▶'}</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </td>
-                      <td className="p-2 border" dir="ltr">{customer.phone2 || customer.phone}</td>
-                      <td className="p-2 border text-red-500 text-right">
+                      <td className="p-3 border" dir="ltr">{customer.phone2 || customer.phone}</td>
+                      <td className="p-3 border text-red-500 text-right font-medium">
                         {formatCurrency(customer.balance)}
                       </td>
-                      <td className="p-2 border text-center">
+                      <td className="p-3 border text-center">
                         <button
                           onClick={() => sendWhatsAppReminders([customer.id])}
                           disabled={sendingMessages}
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 mx-auto"
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 mx-auto transition-colors"
                         >
-                          <Send className="h-3 w-3" />
+                          <Send className="h-4 w-4" />
                           שלח
                         </button>
                       </td>
@@ -287,28 +283,29 @@ return (
                     {expandedCustomer === customer.id && (
                       <tr>
                         <td colSpan="5" className="border p-0">
-                          <div className="bg-gray-50 p-4">
-                            <h4 className="text-sm font-medium text-gray-600 mb-2">חשבוניות פתוחות:</h4>
+                          <div className="bg-gray-50 p-4 space-y-3">
                             {customerInvoices[customer.id]?.length > 0 ? (
-                              <div className="space-y-2">
-                                {customerInvoices[customer.id].map((invoice) => (
-                                  <div 
-                                    key={invoice.ID} 
-                                    className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
-                                  >
-                                    <div className="text-sm">
-                                      <span className="font-medium">#{invoice.DocumentNumber}</span>
-                                      <span className="text-gray-500 mx-2">|</span>
-                                      <span className="text-gray-500">{invoice.Date}</span>
+                              customerInvoices[customer.id].map((invoice) => (
+                                <div 
+                                  key={invoice.ID} 
+                                  className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-200 transition-colors"
+                                >
+                                  <div className="flex gap-3 items-center">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-lg">
+                                      <FileText className="h-5 w-5" />
                                     </div>
-                                    <div className="text-red-500">
-                                      {formatCurrency(invoice.TotalPrice)}
+                                    <div>
+                                      <div className="font-medium">חשבונית #{invoice.DocumentNumber}</div>
+                                      <div className="text-gray-500 text-sm">{invoice.Date}</div>
                                     </div>
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="text-red-500 font-medium text-lg">
+                                    {formatCurrency(invoice.TotalPrice)}
+                                  </div>
+                                </div>
+                              ))
                             ) : (
-                              <div className="text-gray-500 text-sm text-center py-2">
+                              <div className="text-gray-500 text-center py-4 bg-white rounded-lg border border-gray-200">
                                 אין חשבוניות פתוחות
                               </div>
                             )}
@@ -319,8 +316,8 @@ return (
                   </React.Fragment>
                 ))}
                 <tr className="bg-gray-100 font-bold">
-                  <td colSpan="3" className="p-2 border text-right">סה"כ חובות פתוחים:</td>
-                  <td colSpan="2" className="p-2 border text-red-500 text-right">
+                  <td colSpan="3" className="p-3 border text-right">סה"כ חובות פתוחים:</td>
+                  <td colSpan="2" className="p-3 border text-red-500 text-right text-lg">
                     {formatCurrency(getTotalDebt())}
                   </td>
                 </tr>
