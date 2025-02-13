@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Search, Send } from 'lucide-react';
+import { Search, Send, FileText } from 'lucide-react';
 
 const CustomerBalanceManager = () => {
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ const CustomerBalanceManager = () => {
               })
             },
             body: JSON.stringify({
-              CustomerID: Number(customerId), // המרה למספר
+              CustomerID: Number(customerId),
               PageSize: 1000,
               PageNumber: 1,
               docTypeID: 0,
@@ -258,13 +258,23 @@ return (
                       </td>
                       <td className="p-2 border">
                         <div className="flex items-center justify-between">
-                          <span className="truncate">{customer.name}</span>
-                          <button
-                            onClick={() => toggleCustomerDetails(customer.id)}
-                            className="text-gray-500 hover:text-gray-700 px-2"
-                          >
-                            {expandedCustomer === customer.id ? '▼' : '▶'}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{customer.name}</span>
+                            {customerInvoices[customer.id]?.length > 0 && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {customerInvoices[customer.id].length} חשבוניות
+                              </span>
+                            )}
+                          </div>
+                          {customerInvoices[customer.id]?.length > 0 && (
+                            <button
+                              onClick={() => toggleCustomerDetails(customer.id)}
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 px-2 py-1 rounded transition-colors"
+                            >
+                              <FileText className="h-4 w-4" />
+                              {expandedCustomer === customer.id ? 'סגור' : 'פתח'}
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="p-2 border" dir="ltr">{customer.phone2 || customer.phone}</td>
@@ -313,7 +323,7 @@ return (
                               )
                             ) : (
                               <div className="text-center py-2">
-                                <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-green-600 rounded-full"/>
+                                <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full"/>
                               </div>
                             )}
                           </div>
@@ -345,14 +355,24 @@ return (
                         onChange={() => handleCustomerSelect(customer.id)}
                         className="h-4 w-4"
                       />
-                      <h3 className="font-medium">{customer.name}</h3>
+                      <div>
+                        <h3 className="font-medium">{customer.name}</h3>
+                        {customerInvoices[customer.id]?.length > 0 && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {customerInvoices[customer.id].length} חשבוניות
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => toggleCustomerDetails(customer.id)}
-                      className="text-gray-500 p-1"
-                    >
-                      {expandedCustomer === customer.id ? '▼' : '▶'}
-                    </button>
+                    {customerInvoices[customer.id]?.length > 0 && (
+                      <button
+                        onClick={() => toggleCustomerDetails(customer.id)}
+                        className="flex items-center gap-1 text-blue-600 px-2 py-1 rounded"
+                      >
+                        <FileText className="h-4 w-4" />
+                        {expandedCustomer === customer.id ? 'סגור' : 'פתח'}
+                      </button>
+                    )}
                   </div>
                   
                   <div className="flex justify-between items-center mt-2">
@@ -392,7 +412,7 @@ return (
                         )
                       ) : (
                         <div className="text-center py-2">
-                          <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-green-600 rounded-full"/>
+                          <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full"/>
                         </div>
                       )}
                     </div>
