@@ -8,10 +8,29 @@ const CustomerBalanceManager = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [sendingMessages, setSendingMessages] = useState(false);
+  const [currentCustomerIndex, setCurrentCustomerIndex] = useState(0);
   const [dateFilter, setDateFilter] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
+
+  const formatPhoneNumber = (phone) => {
+    // הסר כל תו שאינו ספרה
+    let cleaned = phone?.replace(/\D/g, '');
+    
+    // אם המספר מתחיל ב-0, החלף אותו ב-972
+    if (cleaned?.startsWith('0')) {
+      cleaned = '972' + cleaned.substring(1);
+    }
+    
+    // אם אין קידומת 972, הוסף אותה
+    if (!cleaned?.startsWith('972')) {
+      cleaned = '972' + cleaned;
+    }
+    
+    return cleaned;
+  };
 
   const getCustomerOpenInvoices = async (customerId, fromDate) => {
     try {
@@ -50,7 +69,6 @@ const CustomerBalanceManager = () => {
     setError(null);
     
     try {
-      // קבלת כל הלקוחות
       const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getAllCustomers', {
         method: 'POST',
         headers: {
@@ -77,13 +95,12 @@ const CustomerBalanceManager = () => {
       if (data.Success) {
         const customersWithNegativeBalance = data.ReturnValue.filter(customer => customer.balance < 0);
         
-        // עדכון היתרות לפי תאריך
         const updatedCustomers = await Promise.all(
           customersWithNegativeBalance.map(async (customer) => {
             const invoicesAfterDate = await getCustomerOpenInvoices(customer.id, dateFilter);
             return {
               ...customer,
-              balance: customer.balance + invoicesAfterDate // מחסירים את החשבוניות שאחרי התאריך
+              balance: customer.balance + invoicesAfterDate
             };
           })
         );
@@ -134,14 +151,38 @@ const CustomerBalanceManager = () => {
     return customers.reduce((sum, customer) => sum + Math.abs(customer.balance), 0);
   };
 
-  const sendWhatsAppReminders = () => {
+  const sendWhatsAppReminders = async () => {
     const selectedCustomersData = customers.filter(customer => selectedCustomers.includes(customer.id));
-    selectedCustomersData.forEach(customer => {
-      const cleanPhone = customer.phone2?.replace(/[-()]/g, '') || customer.phone?.replace(/[-()]/g, '');
-      const message = `שלום ${customer.name},\nברצוננו להזכיר כי קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.\nנודה להסדרת התשלום בהקדם.`;
-      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    setSendingMessages(true);
+    setCurrentCustomerIndex(0);
+
+    for (let i = 0; i < selectedCustomersData.length; i++) {
+      const customer = selectedCustomersData[i];
+      setCurrentCustomerIndex(i);
+
+      const phoneToUse = customer.phone2 || customer.phone;
+      if (!phoneToUse) {
+        console.error('No phone number found for customer:', customer.name);
+        continue;
+      }
+
+      const formattedPhone = formatPhoneNumber(phoneToUse);
+      const message = `שלום ${customer.name},
+ברצוננו להזכיר כי קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.
+נודה להסדרת התשלום בהקדם.
+
+בברכה,
+${window.location.hostname}`;
+
+      const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
-    });
+
+      if (i < selectedCustomersData.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    setSendingMessages(false);
   };
 
   return (
@@ -225,11 +266,20 @@ const CustomerBalanceManager = () => {
             </div>
             <button
               onClick={sendWhatsAppReminders}
-              disabled={selectedCustomers.length === 0}
+              disabled={selectedCustomers.length === 0 || sendingMessages}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
             >
-              <Send className="h-4 w-4" />
-              שלח תזכורת בווטסאפ
+              {sendingMessages ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  שולח {currentCustomerIndex + 1} מתוך {selectedCustomers.length}
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  שלח תזכורת בווטסאפ
+                </>
+              )}
             </button>
           </div>
         </>
