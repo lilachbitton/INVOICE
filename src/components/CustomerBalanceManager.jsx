@@ -215,19 +215,18 @@ ${window.location.hostname}`;
         <div className="text-red-500 text-center p-4">{error}</div>
       ) : (
         <>
-          <div className="overflow-x-auto mb-4">
+          {/* תצוגת טבלה למסך רחב */}
+          <div className="hidden md:block overflow-x-auto mb-4">
             <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="p-2 border text-right w-12">
-                    <label className="flex items-center justify-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedCustomers.length === customers.length}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="h-4 w-4"
-                      />
-                    </label>
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.length === customers.length}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="h-4 w-4"
+                    />
                   </th>
                   <th className="p-2 border text-right w-1/3">שם הלקוח</th>
                   <th className="p-2 border text-right w-1/4">טלפון</th>
@@ -269,6 +268,54 @@ ${window.location.hostname}`;
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          {/* תצוגת כרטיסים למובייל */}
+          <div className="md:hidden space-y-4">
+            {customers.map((customer) => (
+              <div key={customer.id} className="bg-white p-4 rounded-lg shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.includes(customer.id)}
+                      onChange={() => handleCustomerSelect(customer.id)}
+                      className="h-4 w-4 ml-2"
+                    />
+                    <span className="font-medium text-lg truncate max-w-[200px]" title={customer.name}>
+                      {customer.name}
+                    </span>
+                  </div>
+                  <div className="text-red-500 font-bold">
+                    {formatCurrency(customer.balance)}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-gray-600">
+                  <div dir="ltr" className="text-sm">
+                    {customer.phone2 || customer.phone}
+                  </div>
+                  <button
+                    onClick={() => sendWhatsAppReminders([customer.id])}
+                    disabled={sendingMessages}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm flex items-center gap-1"
+                  >
+                    <Send className="h-4 w-4" />
+                    שלח תזכורת
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            {/* סיכום למובייל */}
+            <div className="bg-gray-100 p-4 rounded-lg shadow sticky bottom-0">
+              <div className="flex justify-between items-center">
+                <span className="font-bold">סה"כ חובות:</span>
+                <span className="text-red-500 font-bold">{formatCurrency(getTotalDebt())}</span>
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                {selectedCustomers.length} לקוחות נבחרו מתוך {customers.length}
+              </div>
+            </div>
           </div>
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
