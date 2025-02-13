@@ -3,13 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { Search, Send } from 'lucide-react';
 
 const CustomerBalanceManager = () => {
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [sendingMessages, setSendingMessages] = useState(false);
   const [currentCustomerIndex, setCurrentCustomerIndex] = useState(0);
+  const [expandedCustomer, setExpandedCustomer] = useState(null);
+  const [customerInvoices, setCustomerInvoices] = useState({});
+  const [customers, setCustomers] = useState([]);
   const [dateFilter, setDateFilter] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
