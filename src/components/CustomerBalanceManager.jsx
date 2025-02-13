@@ -271,51 +271,126 @@ ${window.location.hostname}`;
           </div>
 
           {/* תצוגת כרטיסים למובייל */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3">
             {customers.map((customer) => (
-              <div key={customer.id} className="bg-white p-4 rounded-lg shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCustomers.includes(customer.id)}
-                      onChange={() => handleCustomerSelect(customer.id)}
-                      className="h-4 w-4 ml-2"
-                    />
-                    <span className="font-medium text-lg truncate max-w-[200px]" title={customer.name}>
-                      {customer.name}
-                    </span>
+              <div key={customer.id} className="bg-white rounded-lg shadow-sm border border-gray-100">
+                {/* כותרת הכרטיס */}
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedCustomers.includes(customer.id)}
+                        onChange={() => handleCustomerSelect(customer.id)}
+                        className="h-4 w-4"
+                      />
+                      <h3 className="font-medium text-lg">{customer.name}</h3>
+                    </div>
+                    <button
+                      onClick={() => toggleCustomerDetails(customer.id)}
+                      className="text-gray-500 p-1"
+                    >
+                      {expandedCustomer === customer.id ? '▼' : '▶'}
+                    </button>
                   </div>
-                  <div className="text-red-500 font-bold">
-                    {formatCurrency(customer.balance)}
+                  
+                  <div className="flex justify-between items-center">
+                    <div dir="ltr" className="text-gray-600">
+                      {customer.phone2 || customer.phone}
+                    </div>
+                    <div className="text-red-500 font-bold">
+                      {formatCurrency(customer.balance)}
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-gray-600">
-                  <div dir="ltr" className="text-sm">
-                    {customer.phone2 || customer.phone}
+
+                {/* תוכן מורחב */}
+                {expandedCustomer === customer.id && (
+                  <div className="border-t border-gray-100 bg-gray-50">
+                    <div className="p-4 space-y-2">
+                      <h4 className="text-sm font-medium text-gray-600 mb-2">פירוט חשבוניות פתוחות:</h4>
+                      {customerInvoices[customer.id] ? (
+                        customerInvoices[customer.id].length > 0 ? (
+                          <div className="space-y-2">
+                            {customerInvoices[customer.id].map((invoice) => (
+                              <div 
+                                key={invoice.ID} 
+                                className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
+                              >
+                                <div className="text-sm">
+                                  <div className="font-medium">#{invoice.DocumentNumber}</div>
+                                  <div className="text-gray-500 text-xs">{invoice.Date}</div>
+                                </div>
+                                <div className="text-red-500">
+                                  {formatCurrency(invoice.TotalPrice)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm text-center py-2">
+                            אין חשבוניות פתוחות
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-2">
+                          <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-green-600 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                )}
+
+                {/* כפתור שליחה */}
+                <div className="p-2 border-t border-gray-100">
                   <button
                     onClick={() => sendWhatsAppReminders([customer.id])}
                     disabled={sendingMessages}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm flex items-center gap-1"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Send className="h-4 w-4" />
-                    שלח תזכורת
+                    שלח תזכורת בווטסאפ
                   </button>
                 </div>
               </div>
             ))}
             
             {/* סיכום למובייל */}
-            <div className="bg-gray-100 p-4 rounded-lg shadow sticky bottom-0">
-              <div className="flex justify-between items-center">
-                <span className="font-bold">סה"כ חובות:</span>
-                <span className="text-red-500 font-bold">{formatCurrency(getTotalDebt())}</span>
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                {selectedCustomers.length} לקוחות נבחרו מתוך {customers.length}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-lg">סה"כ חובות:</span>
+                  <span className="text-red-500 font-bold text-xl">{formatCurrency(getTotalDebt())}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">
+                    {selectedCustomers.length} לקוחות נבחרו מתוך {customers.length}
+                  </span>
+                  {selectedCustomers.length > 0 && (
+                    <button
+                      onClick={() => sendWhatsAppReminders()}
+                      disabled={sendingMessages}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+                    >
+                      {sendingMessages ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          שולח {currentCustomerIndex + 1} מתוך {selectedCustomers.length}
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          שלח לנבחרים
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* מרווח בתחתית בשביל הסיכום הקבוע */}
+            <div className="h-28" />
           </div>
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
