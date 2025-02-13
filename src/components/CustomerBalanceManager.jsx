@@ -247,7 +247,39 @@ ${window.location.hostname}`;
                         className="h-4 w-4"
                       />
                     </td>
-                    <td className="p-2 border truncate" title={customer.name}>{customer.name}</td>
+                    <td className="p-2 border truncate" title={customer.name}>
+                      <div className="flex items-center justify-between">
+                        <span>{customer.name}</span>
+                        <button
+                          onClick={() => toggleCustomerDetails(customer.id)}
+                          className="text-gray-500 hover:text-gray-700 px-2"
+                        >
+                          {expandedCustomer === customer.id ? '▼' : '▶'}
+                        </button>
+                      </div>
+                      {expandedCustomer === customer.id && (
+                        <div className="mt-2 bg-gray-50 p-2 rounded">
+                          {customerInvoices[customer.id] ? (
+                            customerInvoices[customer.id].length > 0 ? (
+                              <div className="space-y-1">
+                                {customerInvoices[customer.id].map((invoice) => (
+                                  <div key={invoice.ID} className="flex justify-between text-sm">
+                                    <span>#{invoice.DocumentNumber} ({invoice.Date})</span>
+                                    <span className="text-red-500">{formatCurrency(invoice.TotalPrice)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-gray-500 text-sm">אין חשבוניות פתוחות</div>
+                            )
+                          ) : (
+                            <div className="flex justify-center">
+                              <div className="animate-spin h-4 w-4 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-2 border" dir="ltr">{customer.phone2 || customer.phone}</td>
                     <td className="p-2 border text-red-500 text-right">
                       {formatCurrency(customer.balance)}
