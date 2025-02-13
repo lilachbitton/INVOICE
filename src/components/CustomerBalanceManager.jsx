@@ -17,59 +17,43 @@ const CustomerBalanceManager = () => {
     return today.toISOString().split('T')[0];
   });
 
-  const toggleCustomerDetails = async (customerId) => {
-    console.log('Toggling details for customer:', customerId);
-    if (expandedCustomer === customerId) {
-      setExpandedCustomer(null);
-    } else {
-      setExpandedCustomer(customerId);
-      if (!customerInvoices[customerId]) {
-        try {
-          const startDate = new Date();
-          startDate.setFullYear(startDate.getFullYear() - 1); // שנה אחורה
+  const fetchCustomerInvoices = async (customerId) => {
+    try {
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - 1); // שנה אחורה
 
-          const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getOpenInvoices', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': JSON.stringify({
-                secret: '094409be-bb9c-4a51-b3b5-2d15dc2d2154',
-                userkey: 'CWKaRN8167zMA5niguEf'
-              })
-            },
-            body: JSON.stringify({
-              CustomerID: Number(customerId),
-              PageSize: 1000,
-              PageNumber: 1,
-              docTypeID: 0,
-              from: startDate.toISOString().split('T')[0] + ' 00:00',
-              to: new Date().toISOString().split('T')[0] + ' 23:59'
-            })
-          });
+      const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getOpenInvoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': JSON.stringify({
+            secret: '094409be-bb9c-4a51-b3b5-2d15dc2d2154',
+            userkey: 'CWKaRN8167zMA5niguEf'
+          })
+        },
+        body: JSON.stringify({
+          CustomerID: Number(customerId),
+          PageSize: 1000,
+          PageNumber: 1,
+          docTypeID: 0,
+          from: startDate.toISOString().split('T')[0] + ' 00:00',
+          to: new Date().toISOString().split('T')[0] + ' 23:59'
+        })
+      });
 
-          const data = await response.json();
-          console.log('API Response:', data);
-          
-          if (data.Success) {
-            setCustomerInvoices(prev => ({
-              ...prev,
-              [customerId]: data.ReturnValue || []
-            }));
-          } else {
-            console.error('API Error:', data.ErrorMessage);
-            setCustomerInvoices(prev => ({
-              ...prev,
-              [customerId]: []
-            }));
-          }
-        } catch (err) {
-          console.error('Error fetching invoices:', err);
-          setCustomerInvoices(prev => ({
-            ...prev,
-            [customerId]: []
-          }));
-        }
+      const data = await response.json();
+      if (data.Success) {
+        setCustomerInvoices(prev => ({
+          ...prev,
+          [customerId]: data.ReturnValue || []
+        }));
       }
+    } catch (err) {
+      console.error('Error fetching invoices:', err);
+      setCustomerInvoices(prev => ({
+        ...prev,
+        [customerId]: []
+      }));
     }
   };
 
@@ -104,6 +88,11 @@ const CustomerBalanceManager = () => {
       if (data.Success) {
         const customersWithNegativeBalance = data.ReturnValue.filter(customer => customer.balance < 0);
         setCustomers(customersWithNegativeBalance);
+        
+        // טען את החשבוניות עבור כל הלקוחות
+        for (const customer of customersWithNegativeBalance) {
+          await fetchCustomerInvoices(customer.id);
+        }
       } else {
         setError(data.ErrorMessage || 'שגיאה בטעינת נתונים');
       }
@@ -160,6 +149,10 @@ const CustomerBalanceManager = () => {
     return cleaned;
   };
 
+  const toggleCustomerDetails = (customerId) => {
+    setExpandedCustomer(prev => prev === customerId ? null : customerId);
+  };
+
   const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
     const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
     setSendingMessages(true);
@@ -193,7 +186,6 @@ ${window.location.hostname}`;
 
     setSendingMessages(false);
   };
-
 return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       {/* Header */}
@@ -297,33 +289,27 @@ return (
                         <td colSpan="5" className="border p-0">
                           <div className="bg-gray-50 p-4">
                             <h4 className="text-sm font-medium text-gray-600 mb-2">חשבוניות פתוחות:</h4>
-                            {customerInvoices[customer.id] ? (
-                              customerInvoices[customer.id].length > 0 ? (
-                                <div className="space-y-2">
-                                  {customerInvoices[customer.id].map((invoice) => (
-                                    <div 
-                                      key={invoice.ID} 
-                                      className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
-                                    >
-                                      <div className="text-sm">
-                                        <span className="font-medium">#{invoice.DocumentNumber}</span>
-                                        <span className="text-gray-500 mx-2">|</span>
-                                        <span className="text-gray-500">{invoice.Date}</span>
-                                      </div>
-                                      <div className="text-red-500">
-                                        {formatCurrency(invoice.TotalPrice)}
-                                      </div>
+                            {customerInvoices[customer.id]?.length > 0 ? (
+                              <div className="space-y-2">
+                                {customerInvoices[customer.id].map((invoice) => (
+                                  <div 
+                                    key={invoice.ID} 
+                                    className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
+                                  >
+                                    <div className="text-sm">
+                                      <span className="font-medium">#{invoice.DocumentNumber}</span>
+                                      <span className="text-gray-500 mx-2">|</span>
+                                      <span className="text-gray-500">{invoice.Date}</span>
                                     </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-gray-500 text-sm text-center py-2">
-                                  אין חשבוניות פתוחות
-                                </div>
-                              )
+                                    <div className="text-red-500">
+                                      {formatCurrency(invoice.TotalPrice)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             ) : (
-                              <div className="text-center py-2">
-                                <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full"/>
+                              <div className="text-gray-500 text-sm text-center py-2">
+                                אין חשבוניות פתוחות
                               </div>
                             )}
                           </div>
@@ -387,32 +373,26 @@ return (
                   {expandedCustomer === customer.id && (
                     <div className="mt-4 bg-gray-50 rounded p-3">
                       <h4 className="text-sm font-medium text-gray-600 mb-2">חשבוניות פתוחות:</h4>
-                      {customerInvoices[customer.id] ? (
-                        customerInvoices[customer.id].length > 0 ? (
-                          <div className="space-y-2">
-                            {customerInvoices[customer.id].map((invoice) => (
-                              <div 
-                                key={invoice.ID} 
-                                className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
-                              >
-                                <div className="text-sm">
-                                  <div className="font-medium">#{invoice.DocumentNumber}</div>
-                                  <div className="text-gray-500 text-xs">{invoice.Date}</div>
-                                </div>
-                                <div className="text-red-500">
-                                  {formatCurrency(invoice.TotalPrice)}
-                                </div>
+                      {customerInvoices[customer.id]?.length > 0 ? (
+                        <div className="space-y-2">
+                          {customerInvoices[customer.id].map((invoice) => (
+                            <div 
+                              key={invoice.ID} 
+                              className="flex justify-between items-center bg-white p-2 rounded border border-gray-100"
+                            >
+                              <div className="text-sm">
+                                <div className="font-medium">#{invoice.DocumentNumber}</div>
+                                <div className="text-gray-500 text-xs">{invoice.Date}</div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 text-sm text-center py-2">
-                            אין חשבוניות פתוחות
-                          </div>
-                        )
+                              <div className="text-red-500">
+                                {formatCurrency(invoice.TotalPrice)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <div className="text-center py-2">
-                          <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full"/>
+                        <div className="text-gray-500 text-sm text-center py-2">
+                          אין חשבוניות פתוחות
                         </div>
                       )}
                     </div>
