@@ -169,12 +169,14 @@ const CustomerBalanceManager = () => {
       }
 
       const formattedPhone = formatPhoneNumber(phoneToUse);
-      const message = `שלום ${customer.name},
-ברצוננו להזכיר כי קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.
+const message = `שלום ${customer.name},
+ברצוננו להזכירך כי נכון ליום ${dateFilter}
+קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.
 נודה להסדרת התשלום בהקדם.
 
 בברכה,
-${window.location.hostname}`;
+אבי מלכה
+קינוחים מבית טוב`;
 
       const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
