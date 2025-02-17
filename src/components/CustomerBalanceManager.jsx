@@ -180,7 +180,7 @@ const CustomerBalanceManager = () => {
     setExpandedCustomer(prev => (prev === customerId ? null : customerId));
   };
 
-  // פונקציה לשיתוף מסמך וקבלת קישור
+  // פונקציה לשיתוף מסמך וקבלת קישור (לא בשימוש בתזכורות המעודכנות)
   const getDocumentShareLink = async (documentId) => {
     try {
       const response = await fetch('https://api.yeshinvoice.co.il/api/v1/shareDocument', {
@@ -210,7 +210,7 @@ const CustomerBalanceManager = () => {
     }
   };
 
-  // פונקציה לשליחת תזכורות בווטסאפ עם קישורי חשבוניות
+  // פונקציה לשליחת תזכורות בווטסאפ עם קישורי חשבוניות (גרסה מעודכנת)
   const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
     const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
     setSendingMessages(true);
@@ -231,15 +231,15 @@ const CustomerBalanceManager = () => {
 ברצוננו להזכירך כי נכון ליום ${formatDate(dateFilter)}
 קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.`;
 
+      // הוספת קישורי חשבוניות אם יש חשבוניות פתוחות
       const customerInvoicesList = customerInvoices[customer.id];
       if (customerInvoicesList && customerInvoicesList.length > 0) {
         message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
         
         for (const invoice of customerInvoicesList) {
-          const shareLink = await getDocumentShareLink(invoice.ID);
-          if (shareLink) {
+          if (invoice.pdfUrl) {  // אם יש URL לחשבונית
             message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
-${shareLink}`;
+${invoice.pdfUrl}`;
           }
         }
       }
