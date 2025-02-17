@@ -3,6 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Send, FileText } from 'lucide-react';
 
 const CustomerBalanceManager = () => {
+  const formatDate = (dateString) => {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year.slice(2)}`;
+  };
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
