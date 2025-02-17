@@ -170,7 +170,7 @@ const CustomerBalanceManager = () => {
 
       const formattedPhone = formatPhoneNumber(phoneToUse);
 const message = `שלום ${customer.name},
-ברצוננו להזכירך כי נכון ליום ${dateFilter}
+ברצוננו להזכירך כי נכון ליום ${formatDate(dateFilter)}
 קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.
 נודה להסדרת התשלום בהקדם.
 
