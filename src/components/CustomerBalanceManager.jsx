@@ -1,8 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Search, Send, FileText } from 'lucide-react';
+import { Search, Send, MessageCircle, FileText } from 'lucide-react';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 
 const CustomerBalanceManager = () => {
+  // פונקציה לעיצוב תאריך
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year.slice(2)}`;
@@ -22,11 +25,34 @@ const CustomerBalanceManager = () => {
     return today.toISOString().split('T')[0];
   });
 
+  // State עבור הערות גבייה (Firebase)
+  const [collectionNotes, setCollectionNotes] = useState({});
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [currentCustomerId, setCurrentCustomerId] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  // טעינת הערות מ-Firebase
+  const loadNotes = async () => {
+    try {
+      const notesDoc = await getDoc(doc(db, 'collection-notes', 'all-notes'));
+      if (notesDoc.exists()) {
+        setCollectionNotes(notesDoc.data());
+      }
+    } catch (error) {
+      console.error('Error loading notes:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  // טעינת חשבוניות לקוח
   const fetchCustomerInvoices = async (customerId) => {
     try {
       const startDate = new Date();
       startDate.setFullYear(startDate.getFullYear() - 1); // שנה אחורה
-
       const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getOpenInvoices', {
         method: 'POST',
         headers: {
@@ -45,7 +71,6 @@ const CustomerBalanceManager = () => {
           to: new Date().toISOString().split('T')[0] + ' 23:59'
         })
       });
-
       const data = await response.json();
       if (data.Success) {
         setCustomerInvoices(prev => ({
@@ -62,10 +87,10 @@ const CustomerBalanceManager = () => {
     }
   };
 
+  // טעינת לקוחות
   const fetchCustomers = async () => {
     setLoading(true);
     setError(null);
-    
     try {
       const response = await fetch('https://api.yeshinvoice.co.il/api/v1/getAllCustomers', {
         method: 'POST',
@@ -87,14 +112,11 @@ const CustomerBalanceManager = () => {
           }
         })
       });
-
       const data = await response.json();
-      
       if (data.Success) {
         const customersWithNegativeBalance = data.ReturnValue.filter(customer => customer.balance < 0);
         setCustomers(customersWithNegativeBalance);
-        
-        // טען את החשבוניות עבור כל הלקוחות
+        // טוען חשבוניות לכל לקוח
         for (const customer of customersWithNegativeBalance) {
           await fetchCustomerInvoices(customer.id);
         }
@@ -155,9 +177,40 @@ const CustomerBalanceManager = () => {
   };
 
   const toggleCustomerDetails = (customerId) => {
-    setExpandedCustomer(prev => prev === customerId ? null : customerId);
+    setExpandedCustomer(prev => (prev === customerId ? null : customerId));
   };
 
+  // פונקציה לשיתוף מסמך וקבלת קישור
+  const getDocumentShareLink = async (documentId) => {
+    try {
+      const response = await fetch('https://api.yeshinvoice.co.il/api/v1/shareDocument', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': JSON.stringify({
+            secret: '094409be-bb9c-4a51-b3b5-2d15dc2d2154',
+            userkey: 'CWKaRN8167zMA5niguEf'
+          })
+        },
+        body: JSON.stringify({
+          SendSMS: false,
+          SendEmail: false,
+          id: documentId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.Success) {
+        return data.ReturnValue;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error sharing document:', error);
+      return null;
+    }
+  };
+
+  // פונקציה לשליחת תזכורות בווטסאפ עם קישורי חשבוניות
   const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
     const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
     setSendingMessages(true);
@@ -174,10 +227,24 @@ const CustomerBalanceManager = () => {
       }
 
       const formattedPhone = formatPhoneNumber(phoneToUse);
-      const message = `שלום ${customer.name},
+      let message = `שלום ${customer.name},
 ברצוננו להזכירך כי נכון ליום ${formatDate(dateFilter)}
-קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.
-נודה להסדרת התשלום בהקדם.
+קיימת יתרת חוב על סך ${formatCurrency(customer.balance)}.`;
+
+      const customerInvoicesList = customerInvoices[customer.id];
+      if (customerInvoicesList && customerInvoicesList.length > 0) {
+        message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
+        
+        for (const invoice of customerInvoicesList) {
+          const shareLink = await getDocumentShareLink(invoice.ID);
+          if (shareLink) {
+            message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
+${shareLink}`;
+          }
+        }
+      }
+
+      message += `\n\nנודה להסדרת התשלום בהקדם.
 
 בברכה,
 אבי מלכה
@@ -193,7 +260,57 @@ const CustomerBalanceManager = () => {
 
     setSendingMessages(false);
   };
-return (
+
+  // פתיחת מודל הערות עבור לקוח מסוים
+  const openNotesModal = (customerId) => {
+    setCurrentCustomerId(customerId);
+    setNoteText(collectionNotes[customerId] || '');
+    setIsNotesModalOpen(true);
+  };
+
+  const closeNotesModal = () => {
+    setIsNotesModalOpen(false);
+    setCurrentCustomerId(null);
+    setNoteText('');
+  };
+
+  const handleSaveNote = async () => {
+    if (!currentCustomerId) return;
+    setIsSavingNote(true);
+    try {
+      // עדכון הערה ב-Firebase
+      await setDoc(doc(db, 'collection-notes', 'all-notes'), {
+        [currentCustomerId]: noteText
+      }, { merge: true });
+      // עדכון מצב מקומי
+      setCollectionNotes(prev => ({
+        ...prev,
+        [currentCustomerId]: noteText
+      }));
+      closeNotesModal();
+    } catch (error) {
+      console.error('Error saving note:', error);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  // קומפוננטה להצגת הערות – לחיצה תפתח את מודל הערות
+  const CollectionNotesCell = ({ customer, openNotesModal }) => {
+    return (
+      <div 
+        onClick={() => openNotesModal(customer.id)}
+        className="cursor-pointer hover:bg-gray-50 p-2 rounded min-h-[40px] flex items-center gap-2"
+      >
+        <MessageCircle className="h-4 w-4 text-blue-600" />
+        <span className="text-sm text-gray-600">
+          {collectionNotes[customer.id] ? collectionNotes[customer.id] : 'הוסף הערות גבייה...'}
+        </span>
+      </div>
+    );
+  };
+
+  return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       {/* Header */}
       <div className="mb-6">
@@ -240,6 +357,7 @@ return (
                   <th className="p-3 border text-right">שם הלקוח</th>
                   <th className="p-3 border text-right w-48">טלפון</th>
                   <th className="p-3 border text-right w-36">יתרת חוב</th>
+                  <th className="p-3 border text-right">הערות גבייה</th>
                   <th className="p-3 border text-right w-36">פעולות</th>
                 </tr>
               </thead>
@@ -272,9 +390,14 @@ return (
                           )}
                         </div>
                       </td>
-                      <td className="p-3 border" dir="ltr">{customer.phone2 || customer.phone}</td>
+                      <td className="p-3 border" dir="ltr">
+                        {customer.phone2 || customer.phone}
+                      </td>
                       <td className="p-3 border text-red-500 text-right font-medium">
                         {formatCurrency(customer.balance)}
+                      </td>
+                      <td className="p-3 border">
+                        <CollectionNotesCell customer={customer} openNotesModal={openNotesModal} />
                       </td>
                       <td className="p-3 border text-center">
                         <button
@@ -289,7 +412,7 @@ return (
                     </tr>
                     {expandedCustomer === customer.id && (
                       <tr>
-                        <td colSpan="5" className="border p-0">
+                        <td colSpan="6" className="border p-0">
                           <div className="bg-gray-50 p-4 space-y-3">
                             {customerInvoices[customer.id]?.length > 0 ? (
                               customerInvoices[customer.id].map((invoice) => (
@@ -324,7 +447,7 @@ return (
                 ))}
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan="3" className="p-3 border text-right">סה"כ חובות פתוחים:</td>
-                  <td colSpan="2" className="p-3 border text-red-500 text-right text-lg">
+                  <td colSpan="3" className="p-3 border text-red-500 text-right text-lg">
                     {formatCurrency(getTotalDebt())}
                   </td>
                 </tr>
@@ -401,6 +524,11 @@ return (
                       )}
                     </div>
                   )}
+
+                  {/* חלק עבור הערות גבייה במובייל */}
+                  <div className="mt-3 border-t pt-3">
+                    <CollectionNotesCell customer={customer} openNotesModal={openNotesModal} />
+                  </div>
                 </div>
 
                 <div className="p-2 border-t border-gray-100">
@@ -451,9 +579,40 @@ return (
             </div>
           </div>
 
-          {/* Spacing for fixed bottom bar */}
+          {/* ריווח לתחתית */}
           <div className="h-28" />
         </>
+      )}
+
+      {/* מודל לעריכת הערות גבייה */}
+      {isNotesModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-right">הערות גבייה</h2>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              className="w-full p-2 border rounded text-right"
+              rows={5}
+              placeholder="הוסף הערות כאן..."
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={handleSaveNote}
+                disabled={isSavingNote}
+                className="bg-green-600 text-white px-4 py-2 rounded"
+              >
+                {isSavingNote ? 'שומר...' : 'שמור'}
+              </button>
+              <button
+                onClick={closeNotesModal}
+                className="bg-gray-200 px-4 py-2 rounded"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
