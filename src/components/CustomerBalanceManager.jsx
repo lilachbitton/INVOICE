@@ -180,6 +180,32 @@ const CustomerBalanceManager = () => {
     setExpandedCustomer(prev => (prev === customerId ? null : customerId));
   };
 
+  // פונקציה לקיצור לינק באמצעות Short.io
+  const shortenUrl = async (longUrl) => {
+    try {
+      const response = await fetch('https://api.short.io/links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'sk_72B2qiR17BtkjQrJ'
+        },
+        body: JSON.stringify({
+          domain: 'avimalka.short.gy',
+          originalURL: longUrl
+        })
+      });
+
+      const data = await response.json();
+      if (data.shortURL) {
+        return data.shortURL;
+      }
+      return longUrl; // אם נכשל, מחזירים את הלינק המקורי
+    } catch (error) {
+      console.error('Error shortening URL:', error);
+      return longUrl; // אם נכשל, מחזירים את הלינק המקורי
+    }
+  };
+
   // פונקציה לשיתוף מסמך וקבלת קישור (לא בשימוש בתזכורות המעודכנות)
   const getDocumentShareLink = async (documentId) => {
     try {
@@ -235,11 +261,12 @@ const CustomerBalanceManager = () => {
       const customerInvoicesList = customerInvoices[customer.id];
       if (customerInvoicesList && customerInvoicesList.length > 0) {
         message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
-        
+
         for (const invoice of customerInvoicesList) {
           if (invoice.pdfUrl) {  // אם יש URL לחשבונית
+            const shortUrl = await shortenUrl(invoice.pdfUrl);
             message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
-${invoice.pdfUrl}`;
+${shortUrl}`;
           }
         }
       }
