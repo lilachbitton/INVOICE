@@ -271,11 +271,9 @@ const CustomerBalanceManager = () => {
 
         for (const invoice of customerInvoicesList) {
           console.log('Processing invoice:', invoice);
-          // קבלת לינק לחשבונית דרך ה-API
-          const invoiceUrl = await getDocumentShareLink(invoice.ID);
-          console.log('Got invoice URL:', invoiceUrl);
-          if (invoiceUrl) {
-            const shortUrl = await shortenUrl(invoiceUrl);
+          // שימוש ב-pdfUrl שכבר קיים בחשבונית
+          if (invoice.pdfUrl) {
+            const shortUrl = await shortenUrl(invoice.pdfUrl);
             console.log('Shortened URL:', shortUrl);
             message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
 ${shortUrl}`;
