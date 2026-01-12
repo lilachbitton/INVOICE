@@ -260,6 +260,9 @@ const CustomerBalanceManager = () => {
 
       // הוספת קישורי חשבוניות אם יש חשבוניות פתוחות
       const customerInvoicesList = customerInvoices[customer.id];
+      console.log('Customer ID:', customer.id);
+      console.log('customerInvoices object:', customerInvoices);
+      console.log('customerInvoicesList:', customerInvoicesList);
       if (customerInvoicesList && customerInvoicesList.length > 0) {
         message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
 
