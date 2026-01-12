@@ -239,7 +239,10 @@ const CustomerBalanceManager = () => {
 
   // פונקציה לשליחת תזכורות בווטסאפ עם קישורי חשבוניות (גרסה מעודכנת)
   const sendWhatsAppReminders = async (customerIds = selectedCustomers) => {
+    console.log('=== sendWhatsAppReminders called ===');
+    console.log('customerIds:', customerIds);
     const selectedCustomersData = customers.filter(customer => customerIds.includes(customer.id));
+    console.log('selectedCustomersData:', selectedCustomersData);
     setSendingMessages(true);
     setCurrentCustomerIndex(0);
 
