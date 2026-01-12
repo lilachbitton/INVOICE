@@ -206,7 +206,7 @@ const CustomerBalanceManager = () => {
     }
   };
 
-  // פונקציה לשיתוף מסמך וקבלת קישור (לא בשימוש בתזכורות המעודכנות)
+  // פונקציה לשיתוף מסמך וקבלת קישור
   const getDocumentShareLink = async (documentId) => {
     try {
       const response = await fetch('https://api.yeshinvoice.co.il/api/v1/shareDocument', {
@@ -224,9 +224,10 @@ const CustomerBalanceManager = () => {
           id: documentId
         })
       });
-      
+
       const data = await response.json();
-      if (data.Success) {
+      console.log('shareDocument response for ID', documentId, ':', data);
+      if (data.Success && data.ReturnValue) {
         return data.ReturnValue;
       }
       return null;
@@ -263,10 +264,13 @@ const CustomerBalanceManager = () => {
         message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
 
         for (const invoice of customerInvoicesList) {
+          console.log('Processing invoice:', invoice);
           // קבלת לינק לחשבונית דרך ה-API
           const invoiceUrl = await getDocumentShareLink(invoice.ID);
+          console.log('Got invoice URL:', invoiceUrl);
           if (invoiceUrl) {
             const shortUrl = await shortenUrl(invoiceUrl);
+            console.log('Shortened URL:', shortUrl);
             message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
 ${shortUrl}`;
           }
