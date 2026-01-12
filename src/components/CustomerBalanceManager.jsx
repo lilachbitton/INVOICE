@@ -263,8 +263,10 @@ const CustomerBalanceManager = () => {
         message += "\n\nלהלן פירוט החשבוניות הפתוחות:";
 
         for (const invoice of customerInvoicesList) {
-          if (invoice.pdfUrl) {  // אם יש URL לחשבונית
-            const shortUrl = await shortenUrl(invoice.pdfUrl);
+          // קבלת לינק לחשבונית דרך ה-API
+          const invoiceUrl = await getDocumentShareLink(invoice.ID);
+          if (invoiceUrl) {
+            const shortUrl = await shortenUrl(invoiceUrl);
             message += `\nחשבונית מספר ${invoice.DocumentNumber} על סך ${formatCurrency(invoice.TotalPrice)}:
 ${shortUrl}`;
           }
